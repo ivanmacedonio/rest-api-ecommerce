@@ -1,0 +1,120 @@
+-------SERIALIZER
+
+#este es el procedimiento interno que hace django cuando llamamos a modelserielizer
+class TestUserSerializer(serializers.Serializer):
+
+    name= serializers.CharField(max_length = 200)
+
+    email = serializers.EmailField()
+
+    def validate_name(self,value): #value recibe el campo que sigue despues del _
+        if 'develop' in value:
+            raise serializers.ValidationError('Error, no puedes usar ese nombre')
+        return value
+
+    def validate_email(self,value):
+
+        if value == '':
+            raise serializers.ValidationError('Debes indicar un correo')
+        
+        if self.validate_name(self.context['name']) in value: 
+             raise serializers.ValidationError('El email no puede contener el nombre')
+        return value
+
+    def validate(self,data):
+        
+           
+        return data
+    
+    def create(self, validated_data): #recibe la informacion ya validada
+
+        print(validated_data)
+
+        return self.model.objects.create(**validated_data) #carga el modelo enviado por return cargandole mediante ** la informacion validada hasta el momento y la guarda en la bbdd 
+    
+
+    def update(self,instance,validated_data): #la instancia  es los campos obligatorios a rellenar 
+            instance.name = validated_data.get('name', instance.name)
+            instance.email = validated_data.get('email', instance.email)
+            #el nombre de la instancia que recibe lo remplaza por el nombre
+            #que llega por validated data, es decir, el nuevo nombre ya validado
+            #el modelserializer hace esto pero con todos los campos 
+            instance.save()
+            return instance
+    
+    ------API 
+
+
+@api_view(['GET', 'POST']) #carga como parametros validos el get y post
+def userApiView(request):
+
+    if request.method == 'GET': #si el metodo es get
+
+        users = User.objects.all() #en users se guarda toda la informacion, esta informacion es el modelo user cargado con su variable objects
+
+        users_serializer = UserSerializer(users, many=True) #carga en los campos del serializador (los mismos campos que el modelo) la informacion que recolecto users 
+         
+        test_data = {
+            'name': 'develop',
+            'email':'develop@gmail.com'
+        }
+
+        test_user= TestUserSerializer(data=test_data, context= test_data)
+        if test_user.is_valid(): #si no pasa la validacion
+            test_user.save() #llama al create 
+            print("Paso validaciones")
+        else: #retorna un error 
+            print(test_user.errors)       
+
+       
+        return Response(users_serializer.data, status= status.HTTP_200_OK)  #retorna la informacion serializada de users
+    
+    elif request.method == 'POST': #si el metodo http es post 
+
+        user_serializer = UserSerializer(data = request.data) #consulta si los datos ingresados por el ususario coinciden con las variables del modelo
+        
+        if user_serializer.is_valid(): #si coinciden 
+
+            user_serializer.save() #se guarda el usuario cargado de la informacion que llego por post en la bbdd 
+
+            return Response(user_serializer.data,status=status.HTTP_201_CREATED) #retorna los datos que se guardaron en la variable user_serializer 
+        
+        return Response(user_serializer.errors) #en caso de no coincidir se envia la variable errors que indica cual es el problema 
+
+#toda la informacion enviada por POST se va a guardar en una variable
+#llamada request, donde se almacena especificamente en la parte de data
+
+'''
+20. UserSerializer tiene las variables del modelo y compara el nombre de 
+sus variables (data) con la data enviada por el usuario recibida por post
+(request.data). Es decir, des-serializa la data para compararla con 
+la que esta entrando por metodo http
+
+si la informacion coincide, guarda el usuario en la base de datos
+y los datos que envia a la bbdd son la data de la variable creada
+(recordemos que la variable creada es user_serializer y la data
+que contiene es la que post le envio )
+
+'''
+
+@api_view(['GET', 'PUT', 'DELETE']) #usamos el metodo get y put para obtener un dato 
+def user_detail_view(request , pk): #la funcion toma como parametro pk que simula ser una id 
+    if request.method == 'GET': #si el metodo es get 
+        user = User.objects.filter(id=pk).first() #en user se guarda la info del ususario que coincida con la id que llego por parametro
+        user_serializer = UserSerializer(user) #convertimos en json los datos del usuario 
+        return Response(user_serializer.data, status=status.HTTP_200_OK) #retorna los datos 
+        
+    elif request.method == 'PUT': #si el metodo es put va a hacer un update de la informacion
+        user = User.objects.filter(id=pk).first()
+        user_serializer = TestUserSerializer(user,data= request.data, context= request.data) #la data del user va a remplazarse por la data que llego por request (es decir la data que trajo el PUT)
+        #el context le da la capacidad de acceder a las instancias estando definidas en otro lado 
+        if user_serializer.is_valid(): #si coincidieron las id y paso del renglon 55
+            user_serializer.save() #guarda la variable en la bbdd (la remplaza)
+            return Response(user_serializer.data, status=status.HTTP_200_OK) #guarda la data en la bbdd
+        return Response(user_serializer.errors,status=status.HTTP_400_BAD_REQUEST) #si no pasa del 55 hubo un error, entonces retorna error
+
+    elif request.method == 'DELETE':
+        user = User.objects.filter(id=pk).first()
+        user.delete()
+        return Response({'message':'User Deleted suscessfuly!'}, status=status.HTTP_200_OK)
+

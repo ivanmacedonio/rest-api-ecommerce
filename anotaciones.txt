@@ -1,0 +1,1042 @@
+      --------------   CAP 2 - MODELO DE USER  ------------
+
+pip install djangrestframework para instalarlo 
+
+agregamos a installed apps 'rest_framework',  
+
+importamos desde el git del dev el modelo usuario ya creado 
+
+en este segundo capitulo creamos las migraciones del modelo usuario 
+y el modelo historial de usuario 
+
+                    EXPLICACION DEL MODELO USER 
+
+- abstractBaseUser tiene definidas por defecto caracteristicas como 
+getusername, otros get, validacion mediante clean, class method,
+autenticacion, entre otras cosas como encriptacion del password 
+mediante metodos incluidos por dicha funcion 
+
+podemos importarlo como una libreria, y la clase de usuario 
+que creemos va a heredar dicha clase 
+
+podemos asignar mediante unique si el campo debe ser unico o no 
+
+usernamefield es un parametro ya creado por la libreria el cual 
+el valor que le asignemos va a ser el que la libreria setee como 
+nombre se ususario de la persona 
+
+required fields son los campos obligatorios de cada uno de los usuarios 
+
+el str se encarga de que el retorno de la informacion sea legible 
+
+is staff retorna el seelf.usuario_administrador, y al compararlo 
+con el nombre del usuario de la current session retorna si es staff
+o no 
+
+
+-Basusermanager es la clase que se hereda a la hora de crear 
+un usermanager. En el manager se definen las clases de crear usuario 
+y crear superuser. 
+
+la clase crear user recibe por parametro los campos que tendra el user,
+funcionando como modelo el cual sera usado en las funciones de crear usuario 
+y superuser, las cuales se encargaran de enviarle datos por parametro 
+
+define un usuario y recibe los campos de un modelo, en el cual
+definimos los campos relacionandolos con el nombre de los datos 
+que le llegaron x parametro 
+
+(el modelo usuario ya fue importado anteriormente de models)
+
+para encriptar la contraseña usamos la encriptacion que trae django 
+que es set password, la cual fue traida por abstractBaseUser
+
+el save lo guarda en la base de datos y posteriormente lo retornamos para 
+enviar los datos a la bbdd 
+
+para crear el superuser llamamos a la funcion de crear superuser y 
+funciona como la funcion de crear usuario normal aunque las variables
+de is staff se le pone en True 
+
+
+--
+
+
+en la clase user indicamos una variable objects la cual recibe
+la clase de usermanager
+
+el auth user model recibe el nombre de la aplicacion y el nombre 
+del modelo el cual corresponde al usuario, en este caso User,
+asi django identifica que funcion usar a la hora de generar un user 
+
+
+user.save(using=self.db) al tener muchas bbdd, en algunos casos
+es necesario indicar a que base de datos vamos a hacer la QUERY
+
+de momento no reciben ningun dato xq eso es tarea del serializer 
+
+
+
+          ------ CAP 3 , SERIALIZADOR Y APIVIEW  de USER-------
+
+
+los serializadores remplazan a los forms de django, los cuales 
+toman la estructura de un modelo y lo convierten en un  formato JSON,
+o diccionario donde le asignamos valores a las variables 
+
+creamos una carpeta llamada api con el init, api.py y serializer.py y urls
+
+creamos un .py de serializadores dentro de la carpeta de la app e importamos
+la libreria 
+
+class UserSerializer(serializers.ModelSerializer):
+
+la clase proviene de que va a ser un serializador basado en un modelo
+, en este caso el modelo de User 
+
+mediante la clase meta indicamos en que modelo va a basarse el serializer 
+
+con fields indicamos que campos va a tomar del modelo el serializer
+
+en api importamos la apiview 
+
+
+--ir a api 
+
+--sigue en url 
+
+al entrar en la url, /usuario/usuario (la url es asi porque primero 
+ingresamos en la app y luego en la vista )
+
+
+                -----CAP 4 DECORADORES ---- 
+
+en api importamos el decorador llamado apiview. 
+
+le asignamos el decorador api y ahora la clase se convierte en funcion 
+
+la cual va a recibir un request como el resto de las funciones y en 
+el decorador indicamos que metodos de http vamos a usar para capturar los datos
+
+elegimos que metodo preferimos para capturar y armamos un if el cual 
+capture datos cuando se presente el metodo http que elegimos
+recordemos que puede ser get o post 
+
+return Response(users_serializer.data)
+
+ #retorna elementos ya serializados
+#va a retornar la data serializada del usuario creamos una apiview que se va a encargar de mediante el metodo get
+#cargar el serializer, recordemos que este serializer tomaba los campos del modelo user, es decir, se encarga de rellenar los campos el many especifica que va a recibir no un solo dato user, sino muchos
+#provenientes de la misma clase 
+
+--sigue en api 
+
+
+              ------ CAP 5 REGISTRO CON APIVIEW Y SERIALIZER (crear obj) --
+
+get toma la informacion y devuelve todo 
+
+post coloca informacion y devuelve unicamente el registro enviado 
+
+--sige en api 
+
+                ------- CAP 6 DETALLE, UPDATE, DELETE ------
+
+-DETALLE 
+
+para acceder a la informacion de un registro especifico nos basamos 
+en la id que se recibe, la cual vamos a usarla como parametro. 
+
+-- sigue en api en funcion user detail view 
+
+importamos la funcion al archivo de rutas y le asignamos una 
+
+si luego de usuario ingresamos un numero nos envia al detalle del ususario 
+con la id correspondiente, por eso en la ruta indicamos que la url recibe 
+por parametro un entero 
+
+---UPDATE 
+
+para updatear en rest rest_framework usamos el metodo PUT 
+
+--sigue en api PUT
+
+--delete (esta en api )
+
+            -------- CAP 7 MEJORAR EL CODIGO ANTERIOR y definicion get post ----
+
+GET extrae los datos de la pagina web
+
+POST agrega datos  a la pagina web, ya sea por create, update o delete 
+
+cuando hacemos response debemos generar mensajes de error o mensajes 
+emergentes dependiendo la situacion para brindarle esa informacion
+al usuario. por defecto response envia codigo 200, es decir, codigo 
+correcto. 
+
+EN STATUS CODES EN LA DOCUMENTACION DE DJANGO tenemos todos los 
+codigos existentes.
+
+importamos status. 
+
+return Response(users_serializer.data, status= status.HTTP_200_OK)
+
+lo agregamos en la estiqueta status, todo dependiendo del mensaje que queremos mostrar
+
+            ------- CAP 8 SERIALIZERS (orden de ejecucion) ------------- 
+
+vamos a crear un serializador de prueba 
+
+class UserSerializer(serializers.Serializer):
+
+este serializador demuestra que no necesariamente un serializador
+debe estar ligado o basado en un model
+
+la diferencia es que nosotros creamos los campos dentro del serializer 
+pues no hereeda dichos campos d ningun modelo 
+
+el is valid crea una validacion donde indica true o false dependiendo 
+de si los campos requeridos corresponden a los ingresados, por ejemplo, 
+en un emailfield espera un dato de emial con arroba y .com, en caso 
+de no enviar un texto con ese formato no pasa el is valid. En caso de 
+max length 200, le enviamos un texto de 300 caracteres no pasa 
+el is valid. 
+
+
+IS VALID COMO FUNCIONA ?? 
+
+LA PRINCIPAL UTILIDAD ES CONTROLAR LOS ERRORES DENTRO DEL VALIDATE
+Y AGREGAR CONDICIONES ADICIONALES 
+
+el is valid recorre los campos determinando si es valido o no
+basandose en si cumple lo que indica el field del campo
+
+asi es como funciona el is valid
+
+def validate_name(self,value):
+
+        pass 
+
+def validate_email(self,value):
+
+        pass 
+
+def validate(self,value):
+
+        pass 
+
+recorre cada uno de los campos determinando si es valido o no 
+en el caso de no indicar ningun validate_campo pasa directamente
+al validate final sin ejecutar lo que haya dntro de los validate 
+
+
+
+para que no tire error le damos alguna funcionalidad
+
+    def validate_name(self,value):
+        print(value)
+        return value 
+
+    def validate_email(self,value):
+
+        print(value)
+        return value
+
+    def validate(self,data):
+
+        return data
+
+conclusion: 
+
+si no existen los validate_campo pasa directament al validat final 
+
+si existeen, ejecuta las funciones en orden con lo que l indiquemos 
+adentro  
+
+      
+       ---- CAP 9 SERIALIZERS ( validaciones de un serial)--
+
+como la validacion recorre las funciones que se asignan con diferentes campos
+podemos incluir diferentes procesos dentro de ellas 
+
+def validate_name(self,value):
+        if 'develop' in value:
+            raise serializers.ValidationError('Error, no puedes usar ese nombre')
+        return value
+
+sabemos que la validacion al recorrer el serializer pasa por esta funcion 
+asique al pasar va a ejecutar el procedimiento que esta misma incluye 
+
+en este caso retorna un error y el is valid termina su recorrido, pero 
+incluyendo un error 
+
+a la hora de enviarle la funcion 
+serializadora le enviamos un contexto x parametro y el validate 
+de algun campo (en este caso name) recibe el context por self en 
+algun lado de la funcion
+
+al hacer esto, podemos usar los datos de test_data donde queramos, 
+pues el contexto guarda la informacion desde su serializacion
+
+si no usabamos el contexto para manejar la data total, no podiamos 
+acceder al name desde la validacion del email, pues la data en un 
+principio se guardaba en la instancia que se validaba al final
+
+es util para asignar errores a cada uno de los validate, y no guardarlos 
+todos juntos en un solo validate general 
+
+
+
+
+ if self.validate_name(self.context['name']) in value: 
+
+ llamamos a validate name y el value que le enviamos por parametro es el 
+ nombre nuevo, pues recordemos que el nombre que llega por contexto 
+ no pasa por la validacion, asique validamos el nombre nuevo 
+
+
+                  ----CAP 10 CREATE EN UN SERIALIZER --- 
+
+
+cuando llamamos al .save, internamente el serializer pasa por una funcion de create 
+la cual la guarda en la bbdd 
+
+                  ----CAP 11 UPDATE EN UN SERIALIZER --- 
+
+
+las validaciones funcionan igual,  pero cuando se llama al .save 
+en vez de llamar al metodo create llama al update 
+
+si queremos validaciones diferentes para cada una de las instancias 
+ya sea de creacion o de actualizacion podemos crear 2 serializadores diferentes 
+
+
+                  --- CAP 12 METODO SAVE COMO FUNCIONA ---- 
+
+internamente el .save busca un create o un update, y si no hay ninguno de los dos 
+automaticamente realiza los procesos de esas funciones. internamente realiza 
+lo que se indica en la funcion save del test serializer 
+
+si sobrescribimos el metodo save y no indicamos nada, cuando 
+hagamos un put o post no se va a guardar ningun cambio xq django 
+ignora su save prediseñado para utilizar el que le indiquemos 
+
+
+hacer un save aparte lo usamos cuando queramos hacer un serializador 
+para hacer validaciones pero no rgistros en la bbdd, como por ejemplo 
+hacer un registro aparte donde le enviamos un correo electronico a una 
+persona luego de registrarse en nuestra pagina  
+
+por ejemplo 
+
+def save(self):
+
+        print(self.validated_data)
+        send_email()
+pues recoge la informacion validada previamente y la utiliza para realizar 
+la funcion que se le haya asignado 
+
+si llamamos a un .save de un serializador acude al save definido por defecto 
+o definido por nosotros en el serializador. si lo llamamos desde un modelo 
+acude al del modelo, ya sea el predefinido por django o le que generemos nosotrosen}}
+en la pestaña de modelos 
+
+                  
+                  ----CAP 13 TO REPRESENTATION Y FIELDS  --- 
+
+en django el get nos muestra todos los campos, para poder indicar que campos 
+mostrar en el serializador --sigue en serializers 
+
+una vez indicamos que campos se muestran por get, en el apartado de get 
+debemos indicar que datos son los que queremos tomar de users, porque si 
+tomamos todas las instancias y despues indicamos que solo queremos mostrar
+algunas, es decir no todas, crashea 
+
+to reprensentation por default toma todos los fields, si lo sobrescribimos 
+usa el que le indiquemos 
+
+
+            ---CAP 14 ENCRIPTAR PASSWORD CON SERIALIZADOR Y SERIALIZADORES
+            APARTE, UNO PARA ENLISTAR EL OTRO PARA CRUD  --- 
+
+
+---sigue en serializers 
+
+           ---- CAP 15 APLICACION BASE Y MODEL DE PRODUCTOS --- 
+
+creamos la app productos donde se almacenaran los modelos de los productos 
+que corresponderan al ecommerce 
+
+creamos la app "products" yla app "base".
+
+en products estaran los modelos de los productos del ecommerce y 
+en base estaran las clases de uso global de las cuales muchas otras 
+clases van a heredar correspondencias 
+
+en models de base 
+
+el modelo creado van a ser diferentes datos los cuales van a tener en comun 
+otras clases, por ende van a heredar lo de base  
+
+una vez creados los modelos hacemos las migraciones 
+
+agregamos al admin de products los modelos y los registramos para usarlos 
+en el apartado de administrador de django 
+
+              --  CAP 16 SERIALIZADORES PARA LA APP DE PRODUCTOS ---
+
+creamos la carpeta api dentro de products donde crearemos los serializadores 
+
+dentro de api creamos una folder de serializers, donde almacenaremos los
+serializers generales y especificos, para mas comodidad
+
+los generales son los que aplican para todos los modelos 
+
+creamos un folder dentro de api llamado views, donde iran las apiview 
+genericas y especificas 
+
+                --CAP 17 VISTAS GENERICAS DE APIVIEW (LISTAAPIVIEW)--
+
+estas apiview vamos a realizarlas usando clases en vez de funciones 
+
+empezamos en las vistas generales y hacemos las import 
+
+como en estas instancias primero vamos a manejar la bbdd desde el admin de django, 
+armamos las apiview en forma de lista, pues no es necesaria crear una view como tal 
+de momento ya que usaremos el administrador de rest  
+
+si unicamente vamos a listar informacion, rest_framework nos proporciona 
+una clase de herencia (generics.ListAPIView). 
+
+debemos indicar para la lista: el serializador que va a tomar  como referencia
+es decir, de que serializador tomar las JSON para enlistar y la consulta 
+que filtre los objetos que recibe del serializador 
+
+state=true filtra las eliminadas y las excluye 
+
+tecnicamente en las funciones cuando usabamos GET enlistabamos similar que aca 
+
+creamos un archivo de rutas para la nueva carpeta de api que creamos en product 
+y le agregamos la view 
+
+cargamos la nueva vista a las urls principales Y asi con una lista por serializador 
+
+                --CAP 18 ListAPIView GENERAL -- 
+
+podemos crear un api.py dentro de la app de base el cual haga que las 
+listapiview hereden un metodo que autocarga el modelo con el serializador 
+que le indiquemos
+
+para hacer la consulta, hacemos que acceda al meta de la clase del serializador 
+mediante get serializer.meta.model, de esa forma accede al modelo para hacer la QUERY
+y todos los listapiview van a heredar de general list apiview
+
+                --CAP 19 SERIALIZAR RELACIONES EN MODELOS -- 
+
+principal para mostrar otros campos de la relacion que no sean solo el id,
+es decir, si queremos conocer la categoria de un producto debemos serializar 
+esa relacion pues de otra forma no es legible 
+
+creamos el product views dentro del folder views en serializers 
+
+Hay un problema. 
+
+cuando añadimos un producto y le asginamos una categoria, en el GET o la VIEW 
+solamente se muestra la clave foranea numerica, es decir, en vez de decir 
+categoria: celulares dice categoria:1, para solventar esto... 
+
+EN EL SERIALIZADOR DE PRODUCTOS 
+
+el campo de relacion que muestra el id en vez del str, lo remplazamos 
+por el serializador. Es decir, si queremos dejar de ver el id de la unidad 
+de medida para ver la descripcion, dentro de la view 
+
+variable_unidad_de_dedida = serializador_unidad_de_medida 
+
+llamar al serializador le otorga datos JSON al admin en vez de la id solamente 
+
+El metodo 2 es el mejor, donde tenemos que crear un torepresentation 
+con los campos  a incluir en el create, esto desingado dentro del serializador 
+
+    def to_representation(self, instance):
+        return{
+
+            'id': instance.id,
+            'name': instance.name,
+            'description': instance.description,
+            'image': instance.image if instance.image != '' else '',
+            'measure_unit': instance.measure_unit.description,
+            'category_product': instance.category_product.description
+        }
+
+
+
+             
+                
+                
+                -CAP 20 VISTAS GENERICAS: CREATE APIVIEW -- 
+
+
+creamos una funcion generica que recibe por parametro el createapiview 
+
+esta vista va a ser la asignada a los productos 
+
+debemos crear una variable serializadora y agregarle el serializador 
+correspondiente a la funcion que va a desarrollar la vista 
+
+creamos la url 
+
+                --CAP 21 RETIEVEAPIVIEW Y DESTROYAPIVIEW -- 
+
+Es el detail product, en otras palabras 
+
+se trabaja en la view del producto en este caso y se usa una funcion 
+prediseñada 
+
+class ProductRetrieveAPIView(generics.RetrieveAPIView):
+
+    serializer_class= ProductSerializer
+
+añadimos la ruta 
+
+para el destroy, lo creamos como se indico y agregamos la ruta. 
+
+cuando entremos en destroy tenemos la opcion de eliminar un registro 
+
+
+                        --CAP 22 UPDATE EN APIVIEW --
+
+la hacemos en la product view
+
+le debemos pasar la class del serializador y la consulta 
+
+con la generics de update patch le hace un get al product detail,es decir trae la inforamcion 
+
+y put es para actualizar la informacion
+
+
+agregamos la ruta 
+
+                    -- CAP 23 LISTCREATEAPIVIEW Y GETQUERYSET
+                    SELF Y REQUEST  -- 
+
+
+podemos unir la creacion con el listado, es decir, permitir un post en 
+una vista en especifico la cual tenga la funcion de listado (get). 
+lo que permite usar 1 ruta para 2 funciones diferentes 
+
+Voy a cambiar la class de product create apiview, donde le voy a enviar por parametro 
+la clase predefinida de LISTCREATEAPIVIEW, con la diferencia de que debemos enviarle 
+una query.
+
+queryset = ProductSerializer.Meta.model.objects.filter(state= True)
+
+si queremos validaciones o errores personalizados acudimos a sobrescribir los 
+metodos post o get, dependiendo de lo que queramos hacer 
+
+GETQUERYSET es una funcion encargada de tomar una consulta para filtrar 
+objetos. Le enviamos un serializador del cual hacer la consulta y filtro
+y retorna la consulta lista para el get 
+
+SELF toma un dato de una clase ajena 
+
+REQUEST toma datos que le llegan por get o url 
+
+ELIMINAMOS PRODUCTLISTAPIVIEW !!!!!!!!!!!!!!!!!
+
+
+
+            --CAP 24 RETRIEVEUPDATEDESTROYAPIVIEW Y NONETYPE --
+
+unimos en una misma vista el update con el detail y destroy 
+
+En retrieve cambiamos la clase por RetrieveUpdate 
+
+si queremos hacer un put vamos a tener el error de 'NoneType' object has no attribute 'description
+este error surge porque al actualizar un solo campo del formulario, al enviarse todo de vuelta 
+llegan todos los campos vacios (none) excepto los que actualizamos. 
+
+para solucionar este error : 
+
+--product serializers 
+
+   'measure_unit': instance.measure_unit.description if instance.measure_unit is not None else '',
+
+   al validarlo, si le llega una relacion vacia le retorna una cadena vacia en vez de un error de None 
+
+-- podemos enlazar con el delete con retrieveupdatedelete 
+
+los metodos que sobrescribimos los podemos incluir !!
+
+
+            --CAP 25 VIEWSETS Y ROUTERS --
+
+--VIEWSETS TEORIA... 
+
+viewsets son agrupaciones de clases o metodos, es decir, una sola clase
+que contenga los 2 retrieve del capitulo anterior. Podemos poner todo el CRUD 
+en una sola ruta 
+
+en product views importamos la viewset 
+
+--sigue en product view  / product viewset 
+
+le enviamos un serializador y una consulta para filtrar 
+
+para enlazarlo a una ruta no podemos asignarlo a una url, debemos asignarlo a un ROUTER 
+
+las viewsets tienen muchos metodos implementados por django, como update delete entre otros 
+estos metodos predefinidos hacen procedimientos como el create, el que hicimos anteriormente, pero 
+automaticamente, con codigo interno 
+
+en resumen, el viewset agrupa en una sola ruta (router) todos los metodos HTTP 
+create update delete list, entre otros 
+
+--Routers 
+
+router engloba varias rutas en una sola 
+
+dentro de api creamos routers.py 
+
+--sigue en routers.py 
+
+las urls generales las editamos, pues products que es la url que se 
+ingresa antes de llevarnos a la api, ahora nos redirige a routers 
+
+enlazamos la url del proyecto (products) con los routers.
+
+el router se llama products 
+
+entonces para acceder products/products     
+                    proyecto    router 
+
+//podemos eliminar el archivo de urls de la api, recordemos que la url 
+del proyecto products anteriormente estaba enlazada a este archivo, pero 
+ahora usamos el router para evitar tantas url y view diferentes 
+
+TODAS las clases que se encuentren en el mismo archivo del viewset, van a 
+ligarse a el 
+
+para sobreescribirlo podemos acceder a sus instancias, como haciendo asi 
+
+def list 
+
+---- 
+
+return 
+
+.
+
+--sobrescribir los metodos del viewset 
+
+Como tenemos todo almacenado en un viewset, voy a eliminar los 
+metodos anteriores, asique los copio  
+
+class ProductCreateListAPIView(generics.ListCreateAPIView):
+
+    serializer_class = ProductSerializer
+    queryset = ProductSerializer.Meta.model.objects.filter(state= True)
+
+    def post(self,request): #creamos un post nosotros mismos 
+        serializer = self.serializer_class(data=request.data) #en una variable guardamos el serializador 
+        if serializer.is_valid(): #si pasa los requerimientos de los campos
+            serializer.save()#lo guarda en la bbd (lista y retrieve)
+            return Response ({'message': 'Product created Succesfully!'})
+        return Response(serializer.errors, status= status.HTTP_400_BAD_REQUEST)
+
+class ProductRetrieveAPIView(generics.RetrieveUpdateDestroyAPIView):
+
+    serializer_class= ProductSerializer
+
+    def get_queryset(self):
+        return self.get_serializer().Meta.model.objects.filter(state=True)
+    
+    #se encarga de crear la consulta cuando se le indique un id, es decir,
+    #si le enviamos id 1 va a realizar esta query con filter 1
+
+        #esta eliminacion es de tipo logica, la cual desactiva el estado del producto de activo o no
+    def delete(self,request,pk=None):
+        product= self.get_queryset().filter(id=pk).first() #en una variable guardamos
+    #la consulta que filtre por el id que busquemos. si estamos en producto 1 y el id 
+    #coincide con un producto existente, sigue abajo
+        if product: #si existio el producto
+            product.state = False #lo desactiva
+            product.save() #lo guarda 
+            return Response({'message': 'Product Deleted Succesfully!'}, status= status.HTTP_200_OK)
+        return Response({'error': 'No existe un producto'},status = status.HTTP_400_BAD_REQUEST)
+
+
+!!!!!!
+decidi sobrescribir todos los metodos, si no lo hacia funcionaba igual pero 
+lo hice para tener registro del funcionamiento interno de django y tenerlo 
+en cuenta !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+                --CAP 26 AUTODOCUMENTACION DE API : SWAGGER -- 
+
+convertimos las general views en viewsets 
+
+pasamos las url de la api a los router 
+
+--DJANGO REST SWAGGER (OPEN API Y SWAGGER)
+
+swagger sirve para documentar y visualizar nuestra API, es eficaz para generar un cierto 
+orden y organizacion en la documentacion de nuestra api, separando por 
+aplicaciones y sus respectivas rutas, por ejemplo 
+
+--INSTALACION 
+
+pip install drf-yasg
+
+lo agregamos a installed apps con 'drf_yasg'
+
+--sigue en url 
+
+from rest_framework import permissions
+from drf_yasg.views import get_schema_view
+from drf_yasg import openapi
+
+agregamos la siguiente variable 
+
+schema_view = get_schema_view(
+   openapi.Info(
+      title="Snippets API",
+      default_version='v1',
+      description="Test description",
+      terms_of_service="https://www.google.com/policies/terms/",
+      contact=openapi.Contact(email="contact@snippets.local"),
+      license=openapi.License(name="BSD License"),
+   ),
+   public=True,
+   permission_classes=[permissions.AllowAny],
+)
+
+cargamos las rutas para acceder a la documentacion
+    re_path(r'^swagger(?P<format>\.json|\.yaml)$', schema_view.without_ui(cache_timeout=0), name='schema-json'),
+    path('swagger/', schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'),
+    path('redoc/', schema_view.with_ui('redoc', cache_timeout=0), name='schema-redoc'),
+
+]
+
+
+si accedemos al swagger desde la url encontramos nuestros modelos, clases, entre otros todo 
+organizado automaticamente en forma de documentacion para entender mejor la app 
+
+tambien podemos hacer querys desde dicha documentacion, siempre y cuando no se necesite un login 
+
+la seccion de USER no la reconoce porque la trabajamos con funciones, y para que swagger reconozca 
+funciones debemos colocarle decoradores a dichas funciones 
+
+En el caso de querer mostrar la documentacion de todos los endpoint dejamos modelviewset 
+
+en caso de solo querer mostrar documentacion especifica tenemos que usar viewset.GenericViewset 
+
+
+
+ -------------- IMPLEMENTACION DE LOGIN Y LOGOUT --------------
+
+
+            --CAP 27 TOKEN Y JWT -- (TEORIA)
+
+un token es una serie de caracteres que permiten asociarlos a un usuario, agregandole cierta informacion como clave, nombre, entre otras
+encargado de conceder o denegar el acceso al usuario
+
+ejemplo: TOKEN : dfajfajsdf32442g134ñ123lkflñ312f43
+
+jwt es un tipo de token que no hace peticiones a la bbdd pidiendo usuario y contrasña y comparando con el current session,
+para iniciar sesion, sino que hace la peticion a la bbdd comparando el token y viendo a que usuario esta asignado dicho token 
+jwt = json web token 
+
+claims son caracteristicas del jwt y se encargan de tratar los request o peticiones 
+
+usando claves simetricas o asimetricas o datos cifrados se usa la firma digital del jwt, que respalda su seguridad 
+
+los datos cifrados contienen datos sensibles 
+
+jwt hace validaciones sin estar conectada a la bbdd 
+
+es un estándar para transmitir información de forma segura en internet, por medio de archivos en formato JSON
+
+dentro de una cadena de caracteres aleatorios, esa cadna se divide en 3, donde en una parte del texto 
+se encripta el algoritmo de encriptacion que se usa y el tipo de jwt que se usa, luego esta la sensible 
+donde generalmente se almacena un sujeto, un nombre, un id de usuario, etc. en la tercer parte 
+se encripta la firma digital que se le agrega 
+
+ejemplo 
+
+dfajfajsdf32442g 134ñ123lkflñ312f43ads afiOAS2345KLQWDFMOQK
+
+EL PROBLEMA es que un decodificador puede leer la informacion 
+
+la ventaja que tiene el TOKEN es que al estar conectado a la bbdd, la info 
+solo se obtiene accediendo a la bbdd, no como este caso 
+
+el token puede cambiarse cada ciertos minutos, y este se asigna a diferentes datos desde el backend 
+como el usuario, contraseña, etc... un token para cada dato 
+
+-FUNCIONALIDAD 
+
+realiza una autenticacion para usuarios los cuales ingresen o hayn ingresado a la pagina.
+de esta forma no es necesario hacer login cada vez que se ingrese a la web 
+gracias a esto, el servidor puede ejecutar las peticiones estando seguro de que se le esta asignando 
+estas query al usuario correcto, pues lo reconoce gracias a su token UNICO
+
+el sistema de usuarios de django que usamos antes funcionaba porque la peticion la hacia django
+entonces era capaz de comparar que usuario esta haciendo la request. en un caso real las peticiones 
+llegan de todos lados, no desde local.
+--PARA DJANGO 
+
+            JWT EN DJANGO, (SIMPLE JWT)
+
+primero lo instalamos con pip install djangrestframework-simplejwt
+
+envia 2 token, cuando se hace una peticion y se vence el primero, se asigna uno diferente, y asi en bucle 
+
+        AUTENTICACION DE DJANGO (AUTH AUTENTICATION)
+
+tiene una funcion de auth token la cual genera un token para un user espeficico 
+
+se maneja con tokens comunes, es decir una serie de caracteres aleatoria encargada de respaldar un datos
+
+RESUMEN---
+jwt propaga informacion segura codificada en formato json encriptado en una cadena de texto aleatoria 
+la firma digital sirve para verificar que el remitente es quien dice ser y que el mensaje no cambio x el camino
+si el token es erroneo la comprobacion no es correcta (compara el token asignado al usuario con el token recibido por quien dice ser el usuario) y se deniega la peticion
+
+
+         ------- CAP 28 LOGIN CON TOKEN + SESIONES + CASOS DE USO ---
+
+                ----CON AUTH TOKEN --- 
+
+lo agregamos a installed apps 
+
+hacemos migrate para auth token creando un modelo para la bbdd 
+
+cuando un usuario mande usuario y contraseña hay que verificar si tiene token, si tiene lo borramos y creamos uno nuevo (para resetear el tiempo de expiracion, pues el bucle de eliminar 
+y cambiarle el token por uno nuevo no funciona cuando no esta en la pagina),
+si no tiene le creamos uno. 
+
+dentro de users/views.py 
+
+---sigue en views 
+
+--le generamos una ruta en urls principales 
+
+anteriormente las pruebas las haciamos con la vista default de django, en el login ya no puede usarse asique 
+vamos a usar postman 
+
+desde postman podemos hacer peticiones a la url que le indiquemos, la cual es localhost...
+
+en views-- 
+
+creamos una clase para login. 
+
+guardamos en la variabler login_serializer la data que llegue por el serializador que le llegue 
+
+si pasa la validacion (en usuario existe)
+
+se le asigna la variable user toos los datos serializados y validados por el token almacenados en 'user
+
+sino tira error 
+
+si esta activo, la variable token y created van a tomar o crear depediendo el caso la variable user del model token importado y le van a guardar los datos de nuestra sesion 
+
+si tuvo que crear el token, retorna la token key y el user, el tema es que variables como user hay que serializarlas 
+asique procedemos a eso 
+
+--sigue en api/serializers.py 
+
+una vez creado el serializador lo importamos 
+
+el token cambia con cada peticion 
+
+--para que se pueda tener SOLO 1 SESION 
+
+le eliminamos todas las sesiones activas apenas inicie sesion 
+
+importamos session de django 
+
+--sigue en comentarios de views 
+
+--para que si hay sesion iniciada no permita iniciar sesion nuevamente 
+
+if created : 
+
+        ...... 
+
+        else:
+
+                token.delete()
+                return response error ya se ha iniciado sesion 
+
+le tira error y lo bota del sistema,  pues ya no tiene token y debe iniciar sesion 
+para que se le asigne uno nuevo al current session y a su user 
+
+
+                ---CAP 29 LOGOUT + TOKEN + SESIONES --
+
+creamos la clase logout 
+
+--SIGUE EN VIEWS 
+
+creamos la ruta 
+
+            -- CAP 30 TIEMPO DE EXPIRACION PARA EL TOKEN --- 
+
+como agregarle tiempo extra de expiracion a nuestro token 
+
+creamos dentro de users autentication.py 
+
+--sigue en users/ autentication 
+
+EXPLICAION DE LAS FUCIONES --
+
+        todo en authentication.py 
+----
+
+agregamos a settings la variable estatica de token expired after seconds 
+
+donde llamemosa esa funcion, va a llamar al token, autenticarlo y darle un tiempo de vida al token 
+
+                --CAP 31 AUTENTICACION PARA TODAS LAS VISTAS--
+
+creamos authentication mixins.py dentro de users 
+
+sigue en  authentication_mixins.py  y authentication.py-- 
+
+--refrescar el token expirado automaticamente 
+
+  def token_expire_handler(self,token):#crea una variable para saber si expiro el token y desencadena un codigo que verifica si ya expiro el token o no, llamando a la funcion que realiza el calculo
+        is_expire = self.is_token_expired(token) #guarda un true o false dependiendo si vencio o no
+        if is_expire:#si es true
+            user = token.user
+            token.delete()
+            token = self.get_model().objects.create(user=token.user)
+        
+        return is_expire,token
+
+si le expira, le crea un token nuevo y lo retorna 
+
+la actualizacion es sin que el usuario se de cuenta pues no lo botamos de la sesion 
+
+para refrescar el token desde el frontend debemos crear una vista, sigue 
+en views
+
+le creamos la ruta 
+
+TODO ESTE CAPITULO SE HACE MAS SENCILLO USANDO LIBRERIAS, EN ESTE CASO 
+LO HICIMOS POR NUESTRA CUENTA 
+
+podemos buscar como auntenticacion con token 
+
+            ---CAP 32 CONFIGURAR CORS ..
+
+
+cuando hacemos una intercomunicacion necesitamos las politicas de CORS para 
+conectarnos con redes externas, no localhost. 
+
+usamos el paquete de django cors headers 
+
+ python -m pip install django-cors-headers
+
+ lo agregamos a installed apps 
+
+ agregamos el middleware, debe ir lo mas alto posiboe en la lista 
+
+ agregamos en settings 
+ CORS_ALLOWED_ORIGINS = [
+    "http://localhost:3000",
+]
+
+        --CAP 33 CONECTAR DRF + FRONTEND -- 
+
+conectar el frontend a este framework 
+
+le creamos un frontend a la vista de login 
+
+podemos hacer la conexion con los statics como ya hicimos en otro proyecto
+
+        --CAP 38 TIPOS DE AUTENTICACION CON DRF -- 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
