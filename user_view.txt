@@ -1,0 +1,114 @@
+from rest_framework.authtoken.views import ObtainAuthToken
+from rest_framework.response import Response
+from rest_framework import status
+from datetime import datetime
+from rest_framework.authtoken.models import Token
+from apps.users.api.serializers import UserTokenSerializer
+from django.contrib.sessions.models import Session
+from rest_framework.views import APIView
+
+
+
+
+
+class UserToken(APIView):
+    def get(self,request,*args,**kwargs):
+        username = request.GET.get('username')
+        try:
+            user_token = Token.objects.get(user= UserTokenSerializer().Meta.model.objects.filter(username = username).first())
+            return Response ({'token': user_token.key})
+        except:
+            return Response({'error': 'Credenciales enviadas incorrectas'}, status= status.HTTP_400_BAD_REQUEST)
+        
+
+class Login(ObtainAuthToken):
+
+    def post(self,request,*args, **kwargs): #definimos lo que le llega por post
+
+        login_serializer = self.serializer_class(data= request.data, context = {'request':request}) #este serializador predefinido tiene los campos ya serializados de username y password
+
+        if login_serializer.is_valid(): #si es valido significa que en la bbdd este usuario y password esta registrado
+
+            user= login_serializer.validated_data['user'] #se guardan los datos del usuario
+
+            if user.is_active: #SI el usuario esta activo y si puede iniciar sesion, le asignamos un token o se lo creamos
+                
+                token,created = Token.objects.get_or_create(user = user) #trae o le crea un token, dependiendo si detecta que ya tiene o no 
+                #el modelo token dentro tiene un campo user, asique le asignamos el user de la current session
+                user_serializer = UserTokenSerializer(user)
+                if created:
+
+                    return Response({'token' : token.key,
+                                     'user': user_serializer.data,
+                                       'message': 'Inicio de sesion exitoso'}
+                                       ,status=status.HTTP_201_CREATED)
+                else: 
+                    '''
+                    all_sessions = Session.objects.filter(expire_date__gte = datetime.now()) #trae todas las sesiones que tengan fecha de expiracion mas grande o igual que "ya", es decir todas las activas y las almacena en una lista
+                    if all_sessions.exists(): #si haya activas
+                        for session in all_sessions: #itera en todas las sesiones una por una
+                            session_data = session.get_decoded() #hace un get de la informacion de cada session
+                            if user.id == int(session_data.get('_auth_user_id')): #si el usuario que llega es igual al usuario que se esta iterando 
+                                session.delete()#la elimina
+
+                    token.delete() #si el token ya fue creado y quiere volver a iniciar sesion, se lo eliminamos y creamos otro
+                    token = Token.objects.create(user=user)
+                    return Response({'token' : token.key,
+                                     'user': user_serializer.data, 
+                                     'message': 'Inicio de sesion exitoso'
+                                    },status=status.HTTP_201_CREATED)'''
+                
+                    token.delete()
+                    return Response({'error': 'ya ha iniciado sesion este usuario'}, status= status.HTTP_409_CONFLICT)
+            else:
+                return Response({'Error': 'Este usuario no puede iniciar sesion'}, status= status.HTTP_401_UNAUTHORIZED) 
+
+        else:
+            return Response({'error':  'Nombre de usuario o contraseña incorrectos'}, status= status.HTTP_400_BAD_REQUEST)       
+
+        
+
+class Logout(APIView):
+
+    def get(self,request,*args,**kwargs):
+
+        try:
+            token = request.GET.get('token') #guardamos en una variable el token de la current session mediante un get
+            token = Token.objects.filter(key = token).first() #filtramos objetos donde el token recibido coincida con el token del request anterior  
+            if token: #si el token existe
+                user = token.user  #en user se guarda el usuario 
+
+                all_sessions = Session.objects.filter(expire_date__gte = datetime.now())
+                if all_sessions.exists():
+                    for session in all_sessions:
+                        session_data= session.get_decoded()
+                        if user.id == int(session_data.get('_auth_user_id')):
+                            session.delete()
+
+                session_message = 'Sesiones de usuario Eliminadas!'
+
+                token.delete()
+                token_message = 'Token eliminado!'
+                return Response ({'token_message': token_message, 'session_message' : session_message}, 
+                                status= status.HTTP_200_OK)
+
+
+            return Response ({'error':  'No se ha encontrado un  usuario con dichas credenciales!'}, status= status.HTTP_400_BAD_REQUEST)
+    
+        except: 
+            return Response({'error': 'No se ha  encontrado  el token'},  status= status.HTTP_409_CONFLICT)
+        
+
+
+            
+-------SERIALIZERS 
+
+class UserTokenSerializer(serializers.ModelSerializer):
+
+    class Meta:
+
+        model = User
+
+        fields= ('username', 'email')
+
+

@@ -956,7 +956,194 @@ le creamos un frontend a la vista de login
 
 podemos hacer la conexion con los statics como ya hicimos en otro proyecto
 
-        --CAP 38 TIPOS DE AUTENTICACION CON DRF -- 
+        --CAP 39 SIMPLEJWT --   podemos informarnos aparte 
+
+        extraido de https://www.youtube.com/watch?v=Y7fdui9oJEI&list=PLMbRqrU_kvbRI4PgSzgbh8XPEwC1RNj8F&index=38
+
+autenticacion por TOKEN CON LIBRERIA. 
+
+primero la instalamos 
+
+pip install djangorestframework-simplejwt
+
+en settings 
+
+REST_FRAMEWORK = {
+    
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+    ]
+    
+}
+
+en installed apps 'rest_framework_simplejwt'
+
+de productsviewsets eliminamos authentication 
+
+importamos IsAuthenticated
+
+le damos permisos con permission_classes  = (IsAuthenticated)
+
+agregamos las rutas indicadas en la documentacion 
+
+path('api/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
+    path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
+
+la primera retorna el token de acceso y de refresco para un user y contraseña q le enviemos 
+la segunda es la encargada de refrescar el token que se usa en el acceso
+
+cuando hagamos la consulta de token debemos usar bearer en vez de la palabra token 
+
+para usar este tipo de token de forma global, el permission classes lo sacamos de product views 
+
+en settings 
+
+ 'DEFAULT_PERMISSION_CLASSES' : (
+        'rest_framework.permissions.IsAuthenticated',
+    
+    )
+    
+
+
+                --CAP 40 LOGIN Y LOGOUT CON LIBRERIA SIMPLEJWT -- 
+
+
+el archivo views de user lo borramos, aunque lo adjunto en un txt 
+
+sigue en user.views ... 
+
+el serializador de token creado en views sigue en serializers 
+
+refresh token crea un nuevo token de acceso para el usuario que enviamos PERO NO INVALIDA el token anterior
+por ende a pesar de haber hecho logout podemos seguir haciendo peticiones, asique debemos 
+eliminar el primer access token, se ve en el prox cap 
+
+cuando accedemos a la ruta de la libreria de refresh, el token que se actualizaza es el refresh token, no el primary
+por ende el primary a pesar de hacer refresh sigue funcionando
+
+
+            --CAP 41 REFRESH TOKEN Y DELETE TOKEN, BLACKLIST 
+            Y TIEMPO DE EXPIRACION A TOKENS  --
+
+el token no puede eliminarse de forma implicita desde la bbdd, aunque desde 
+el backend podemos borrarlo de una manera aparte 
+
+para que el token deje de funcionar debemos agregarlo a la lista negra 
+
+debemos agregarla a installed apps 
+
+una vez agregado al admin de django se agrega la blacklist tokens 
+
+cada vez que accedamos a refresh token, el refresh token anterior automaticamente se agrega 
+a la black list, esto debemos configurarlo 
+
+en settings 
+
+SIMPLE_JWT = {
+    'ROTATE_REFRESH_TOKENS': True,
+    'BLACKLIST_AFTER_ROTATION':True
+}
+
+cada vez que toquemos refresh nos da un nuevo token de access y uno de refresh,
+y el token de refresh anterior se añade a la blacklist y queda deshabilitado 
+
+si añadimos a la bl el refresh y solo dejamos el access, no tenemos forma de refrescar el de access, 
+por eso genera los dos tokens en vez de solo el de access 
+
+ejemplo: si hacemos un login tenemos nuestros dos token. si hacemos un refresh 
+se cambia nuestro access, se cambia el refresh y el refresh anterior se envia a la bl 
+
+--tiempo de vida 
+
+SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=5),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=1),
+
+IMPORTANDO TIMEDATE
+
+            --CAP 42 CRUD DE USUARIOS CON GENERICVIEWSET -- 
+
+vamos a transformar el crud que tenemos de usuarios en una viewset 
+
+--sigue en users/api/api.py 
+
+vamos a convertir en viewsets esta apiview 
+
+el codigo original se almacena en el txt correspondiente de apiview.txt 
+
+como usamos un viewset, debemos usar un router 
+
+las indicaciones siguen en routers.py dentro de users/api 
+
+!elimianmos el archivo urls de api xq usamos routers 
+
+            --CAP 43 DECORADOR @ACTION EN VIEWSETS--
+
+a los metodos que generan rutas, es decir list create retrieve etc 
+podemos agregarles acciones adicionales. los viewset que permiten esto son modelviewset y 
+genericviewset 
+
+primero importamos action de decorators 
+
+las funciones que creemos que no formen parte de las ya integradas, es decir 
+update destroy create list retrieve, no van a compilar ni funcionar. 
+para que el viewset las tome como una funcionalidad mas debemos agregarles el decorador 
+de action 
+
+
+--sigue en users/api/api y users/api/serializers
+
+        --CAP 44 IMAGES Y PARSERS (JSON, FORM, MULTIPART)--
+
+Las imagenes manejan tipos de campos estaticos, por eso en settings debe
+agregar lo siguiente para manejar este tipo de archivos 
+
+STATIC_URL = 'static/'
+STATICFILES_DIRS = (BASE_DIR, 'static')
+MEDIA_URL = '/media/'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+
+para poder usar las rutas de las imagenes, en cuanto al archivo de rutas urls 
+
+urlpatterns += [
+    re_path(r'^media/(?P<path>.*)$', serve, {
+        'document_root': settings.MEDIA_ROOT,
+    }),
+]
+
+esto levanta un server capaz de renderizar las imagenes durante desarrollo 
+
+from django.views.static import serve
+from django.conf import settings en api 
+
+import os en settings 
+
+supongamos que queremos enviarle una imagen en el create 
+
+el problema surge mostrando el producto, no cargandole la imagen 
+
+en product serializer indicamos que la instancia no es un object sino una url , 
+'image': instance.image.url
+
+--parsers 
+
+los parsers vienen viene incluido en los viewset y se encargan de interactuar 
+cuando trabajamos con files. las iamgenes son files! 
+
+------------MINUTO 8 
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

@@ -1,67 +1,93 @@
 from rest_framework.response import Response
 from rest_framework import status
-from rest_framework.views import APIView
+from rest_framework import viewsets
+from django.shortcuts import get_object_or_404
 from apps.users.models import User
-from rest_framework.decorators import api_view
-from apps.users.api.serializers import UserSerializer, UserListSerializer
+from rest_framework.decorators import action
+from apps.users.api.serializers import UserSerializer, UserListSerializer, UpdateUserSerializer, PasswordSerializer
 
-@api_view(['GET', 'POST']) #carga como parametros validos el get y post
-def userApiView(request):
+class UserViewSet(viewsets.GenericViewSet): #genericviewset es un tipo de viewset no basado en un modelo el cual contiene los 
+    #metodos de get object y getqueryset, que espera que sobreescribamos los metodos,sino no los muestra
+    model = User
 
-    if request.method == 'GET': #si el metodo es get
+    serializer_class = UserSerializer
 
-        users = User.objects.all().values('id', 'username', 'email', 'password') #en users se guarda toda la informacion, esta informacion es el modelo user cargado con su variable objects
+    list_serializer_class = UserListSerializer
 
-        users_serializer = UserSerializer(users, many=True) #carga en los campos del serializador (los mismos campos que el modelo) la informacion que recolecto users 
-         
-        return Response(users_serializer.data, status= status.HTTP_200_OK)  #retorna la informacion serializada de users
+    queryset = None #si existe, sobreescribe el none, si no existe queda el None
+
+    #debemos definir las rutas de CRUD para que las utilice...
+
+    def get_object(self,pk): #recibe un pk y basado en ese pk traer el objeto relacionado, si no lo encuentra que tire raise
+        return get_object_or_404(self.model, pk=pk)
+    #si encuentra la pk dentro de model que coincida con la pk que le llega lo devuelve
+    #sino retorna 404
+
+        
+
+    def get_queryset(self):
+        if self.queryset is None: #si el metodo ya existia el none se sobreescribe, si no existe en genericviewset queda el none y lo creamos nosotros
+            self.queryset = self.model.objects.filter(is_active= True).values('id', 'username', 'email', 'name')
+        #hace un filtro de los usuarios que estan activos y lo guarda en la vriable de la viewset e indicamos que valores mostrar
+        #en values solo pueden incluirse valores que ya hayamos asignado al serializador (to representation), pues no podemos incluir un value no serializado!!!
+        return self.queryset #si ya estaba definida que la devuelva como vino de origen
     
-    elif request.method == 'POST': #si el metodo http es post 
+    @action(detail=True, methods=['post']) #detail true indica que recibira un condicional, en este caso el id.
+    #el method indica de que manera va a trabajar la informacion
+    def set_password(self,request,pk=None): #se encarga de cambiar la contraseña
+        user = self.get_object(pk) #guardamos el usuario que va a ejecutar la query
+        password_serializer = PasswordSerializer(data=request.data) #serializa el password con el que llega por request
+        if password_serializer.is_valid(): #si es valido / paso las validaciones del serializer creado recientemente
+            user.set_password(password_serializer.validated_data['password']) #el password del usuario cambia por el password que llego por request
+            user.save()#lo guarda en la bbdd
+            return Response({
+                'message': 'Contraseña actualizada correctamente!'
+            })
+        return Response({
+            'message': 'Error en la informacion enviada'
+        })
 
-        user_serializer = UserSerializer(data = request.data) #consulta si los datos ingresados por el ususario coinciden con las variables del modelo
-        
-        if user_serializer.is_valid(): #si coinciden 
 
-            user_serializer.save() #se guarda el usuario cargado de la informacion que llego por post en la bbdd 
+    def list(self,request): #serializamos los objectos para mostrarlos
+        users= self.get_queryset() #se carga la consulta de los usuarios activos en users
+        users_serializer = self.list_serializer_class(users, many=True) #serializa la data almacenada en users y la guarda en users_serializers
+        return Response(users_serializer.data, status=status.HTTP_200_OK) #retorna la data ya serializada 
 
-            return Response(user_serializer.data,status=status.HTTP_201_CREATED) #retorna los datos que se guardaron en la variable user_serializer 
-        
-        return Response(user_serializer.errors) #en caso de no coincidir se envia la variable errors que indica cual es el problema 
+    def create(self,request):
 
-#toda la informacion enviada por POST se va a guardar en una variable
-#llamada request, donde se almacena especificamente en la parte de data
+        user_serializer = self.serializer_class(data=request.data) #se serializa la data que llega por request
+        if user_serializer.is_valid():#si es valida
+            user_serializer.save()#guarda la data en la bbdd
+            return Response({'message': 'Usuario creado correctamente!'}, status=status.HTTP_201_CREATED)
+        return Response ({'message': 'No se pudo crear el usuario!', 'errors': user_serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+    
+    def retrieve(self,request, pk=None): #pk none inicializa la variable pk
+        user= self.get_object(pk) #get_object busca un objeto que tenga una id dentro del model que coincida con la que recibio , 
+        #y la que coincida guarda los datos dentro de user
+        user_serializer= self.serializer_class(user)#serializa la data de user 
+        return Response(user_serializer.data)#la retorna en json
+    
+    def update(self,request,pk=None):
+        user = self.get_object(pk)#traemos el objeto
+        user_serializer = UpdateUserSerializer(user, data=request.data) #serializamos el objeto y la data de user se cambia por la que llega mediante request
+        if user_serializer.is_valid(): #si es valido
+            user_serializer.save() #lo actualiza
+            return Response ({
+                'message': 'Usuario actualizado correctamente'
+            }, status=status.HTTP_200_OK)
+        return Response({'message': 'Hay errores en el update!'}, status=status.HTTP_400_BAD_REQUEST)
+    
 
-'''
-20. UserSerializer tiene las variables del modelo y compara el nombre de 
-sus variables (data) con la data enviada por el usuario recibida por post
-(request.data). Es decir, des-serializa la data para compararla con 
-la que esta entrando por metodo http
+#como el user serializer class es un serializador que usamos para todo, tiene campos obligatorios que 
+#obstruyen en la actualizacion, pues en el update no enviamos todos los datos, sino los que 
+#queremos actualizar, obstruye q el serializador general pide password. creamos un nuevo serializador
 
-si la informacion coincide, guarda el usuario en la base de datos
-y los datos que envia a la bbdd son la data de la variable creada
-(recordemos que la variable creada es user_serializer y la data
-que contiene es la que post le envio )
+    def destroy(self,request,pk=None):
+        user_destroy = self.model.objects.filter(id=pk).update(is_active=False)
+#donde la id coincida desactiva el usuario. la funcion update devuelve la cantidad de registros afectados
+#si el registro afectado fue 1, significa que el usuario fue deleteado 
+        if user_destroy == 1: #si es 1 significa que un registro fue updateado o ""eliminado"""
+            return Response({'message': 'Usuario eliminado correctamente'})
+        return Response({'message': 'No se encontro el id correspondiente'}, status=status.HTTP_404_NOT_FOUND)
 
-'''
-
-@api_view(['GET', 'PUT', 'DELETE']) #usamos el metodo get y put para obtener un dato 
-def user_detail_view(request , pk): #la funcion toma como parametro pk que simula ser una id 
-    if request.method == 'GET': #si el metodo es get 
-        user = User.objects.filter(id=pk).first() #en user se guarda la info del ususario que coincida con la id que llego por parametro
-        user_serializer = UserSerializer(user) #convertimos en json los datos del usuario 
-        return Response(user_serializer.data, status=status.HTTP_200_OK) #retorna los datos 
-        
-    elif request.method == 'PUT': #si el metodo es put va a hacer un update de la informacion
-        user = User.objects.filter(id=pk).first()
-        user_serializer = UserSerializer(user,data= request.data, context= request.data) #la data del user va a remplazarse por la data que llego por request (es decir la data que trajo el PUT)
-        #el context le da la capacidad de acceder a las instancias estando definidas en otro lado 
-        if user_serializer.is_valid(): #si coincidieron las id y paso del renglon 55
-            user_serializer.save() #guarda la variable en la bbdd (la remplaza)
-            return Response(user_serializer.data, status=status.HTTP_200_OK) #guarda la data en la bbdd
-        return Response(user_serializer.errors,status=status.HTTP_400_BAD_REQUEST) #si no pasa del 55 hubo un error, entonces retorna error
-
-    elif request.method == 'DELETE':
-        user = User.objects.filter(id=pk).first()
-        user.delete()
-        return Response({'message':'User Deleted suscessfuly!'}, status=status.HTTP_200_OK)
 

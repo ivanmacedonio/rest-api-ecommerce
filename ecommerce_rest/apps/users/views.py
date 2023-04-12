@@ -1,103 +1,48 @@
-from rest_framework.authtoken.views import ObtainAuthToken
 from rest_framework.response import Response
 from rest_framework import status
 from datetime import datetime
-from rest_framework.authtoken.models import Token
-from apps.users.api.serializers import UserTokenSerializer
 from django.contrib.sessions.models import Session
 from rest_framework.views import APIView
+from apps.users.api.serializers import CustomTokenObtainPairSerializer
+from django.contrib.auth import authenticate
+from apps.users.api.serializers import CustomUserSerializer
+from rest_framework.generics import GenericAPIView
+from apps.users.models import User
+from rest_framework_simplejwt.tokens import RefreshToken
 
-class UserToken(APIView):
-    def get(self,request,*args,**kwargs):
-        username = request.GET.get('username')
-        try:
-            user_token = Token.objects.get(user= UserTokenSerializer().Meta.model.objects.filter(username = username).first())
-            return Response ({'token': user_token.key})
-        except:
-            return Response({'error': 'Credenciales enviadas incorrectas'}, status= status.HTTP_400_BAD_REQUEST)
-        
-
-class Login(ObtainAuthToken):
-
-    def post(self,request,*args, **kwargs): #definimos lo que le llega por post
-
-        login_serializer = self.serializer_class(data= request.data, context = {'request':request}) #este serializador predefinido tiene los campos ya serializados de username y password
-
-        if login_serializer.is_valid(): #si es valido significa que en la bbdd este usuario y password esta registrado
-
-            user= login_serializer.validated_data['user'] #se guardan los datos del usuario
-
-            if user.is_active: #SI el usuario esta activo y si puede iniciar sesion, le asignamos un token o se lo creamos
-                
-                token,created = Token.objects.get_or_create(user = user) #trae o le crea un token, dependiendo si detecta que ya tiene o no 
-                #el modelo token dentro tiene un campo user, asique le asignamos el user de la current session
-                user_serializer = UserTokenSerializer(user)
-                if created:
-
-                    return Response({'token' : token.key,
-                                     'user': user_serializer.data,
-                                       'message': 'Inicio de sesion exitoso'}
-                                       ,status=status.HTTP_201_CREATED)
-                else: 
-                    '''
-                    all_sessions = Session.objects.filter(expire_date__gte = datetime.now()) #trae todas las sesiones que tengan fecha de expiracion mas grande o igual que "ya", es decir todas las activas y las almacena en una lista
-                    if all_sessions.exists(): #si haya activas
-                        for session in all_sessions: #itera en todas las sesiones una por una
-                            session_data = session.get_decoded() #hace un get de la informacion de cada session
-                            if user.id == int(session_data.get('_auth_user_id')): #si el usuario que llega es igual al usuario que se esta iterando 
-                                session.delete()#la elimina
-
-                    token.delete() #si el token ya fue creado y quiere volver a iniciar sesion, se lo eliminamos y creamos otro
-                    token = Token.objects.create(user=user)
-                    return Response({'token' : token.key,
-                                     'user': user_serializer.data, 
-                                     'message': 'Inicio de sesion exitoso'
-                                    },status=status.HTTP_201_CREATED)'''
-                
-                    token.delete()
-                    return Response({'error': 'ya ha iniciado sesion este usuario'}, status= status.HTTP_409_CONFLICT)
-            else:
-                return Response({'Error': 'Este usuario no puede iniciar sesion'}, status= status.HTTP_401_UNAUTHORIZED) 
-
-        else:
-            return Response({'error':  'Nombre de usuario o contraseña incorrectos'}, status= status.HTTP_400_BAD_REQUEST)       
-
-        
-
-class Logout(APIView):
-
-    def get(self,request,*args,**kwargs):
-
-        try:
-            token = request.GET.get('token') #guardamos en una variable el token de la current session mediante un get
-            token = Token.objects.filter(key = token).first() #filtramos objetos donde el token recibido coincida con el token del request anterior  
-            if token: #si el token existe
-                user = token.user  #en user se guarda el usuario 
-
-                all_sessions = Session.objects.filter(expire_date__gte = datetime.now())
-                if all_sessions.exists():
-                    for session in all_sessions:
-                        session_data= session.get_decoded()
-                        if user.id == int(session_data.get('_auth_user_id')):
-                            session.delete()
-
-                session_message = 'Sesiones de usuario Eliminadas!'
-
-                token.delete()
-                token_message = 'Token eliminado!'
-                return Response ({'token_message': token_message, 'session_message' : session_message}, 
-                                status= status.HTTP_200_OK)
+from rest_framework_simplejwt.views import TokenObtainPairView
 
 
-            return Response ({'error':  'No se ha encontrado un  usuario con dichas credenciales!'}, status= status.HTTP_400_BAD_REQUEST)
-    
-        except: 
-            return Response({'error': 'No se ha  encontrado  el token'},  status= status.HTTP_409_CONFLICT)
-        
+class Login(TokenObtainPairView): #clase para login que hereda esa clase de la lib
 
+    serializer_class = CustomTokenObtainPairSerializer #serializador del logueo definido en users.api.serializers 
 
-            
+    def post(self,request,*args,**kwargs): #como funciona la informacion que llega por post, es decir, los datos del usuario
+        username = request.data.get('username','') #en username se guarda la informacion que cae por request
+        password = request.data.get('password','')#lo mismo que en username
+        user= authenticate( #si existen los campos devuelve un true 
+            username = username,
+            password = password,
+        )
 
+        if user: #si devolvio un true, es decir los datos son validos
+            login_serializer = self.serializer_class(data=request.data) #serializador del login 
+            if login_serializer.is_valid(): #si la data serializada es valida
+                user_serializer = CustomUserSerializer(user) #en user se guardan sus datos
+                return Response ({ #e indicamos 
+                    'token' : login_serializer.validated_data.get('access'), #que su token tiene acceso
+                    'refresh-token': login_serializer.validated_data.get('refresh'), #le activamos el refresh a su token
+                    'user': user_serializer.data, #la variable usuario relacionada a su token va a valer como el usuario que cayo por request data
+                    'message': 'Inicio de sesion Exitoso!' #mensaje 
+                }, status= status.HTTP_200_OK)
+            return Response({'error': 'Contraseña o username incorrecto'},status=status.HTTP_400_BAD_REQUEST)
+        return Response({'error': 'Contraseña o username incorrecto'},status=status.HTTP_400_BAD_REQUEST)
 
-
-
+class Logout(GenericAPIView):
+    def post (self,request,*args,**kwargs):
+        user = User.objects.filter(id=request.data.get('user', 0)) #recibe un usuario por parametro el cual coincida su id con la que llego por request
+                    #en caso de no encontrar un user del cual tomar la id, toma la ID 0 indicando que no existe el user
+        if user.exists(): #si la id del usuario coincide con una registrada en la bbdd
+            RefreshToken.for_user(user.first()) #el usuario que recibe le vuelve a generar un token, al ser nuevo y no coincidir con el anterior que uso durante su sesion, lo bota del sistema
+            return Response({'message': 'Sesion cerrada correctamente'},status=status.HTTP_200_OK)
+        return Response({'error': 'No existe este usuario!'},status=status.HTTP_400_BAD_REQUEST)

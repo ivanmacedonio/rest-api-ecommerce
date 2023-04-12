@@ -1,13 +1,14 @@
 from apps.products.api.serializers.product_serializers import ProductSerializer
-from rest_framework import generics
 from rest_framework import viewsets
 from rest_framework.response import Response
+from rest_framework.permissions import IsAuthenticated
 from rest_framework import status
-from apps.users.authentication_mixins import Authentication
 
-class ProductViewSet(Authentication, viewsets.ModelViewSet):
+
+class ProductViewSet(viewsets.ModelViewSet):
 
     serializer_class = ProductSerializer
+    
 
     def get_queryset(self, pk=None):
         if pk is None: #si no se envia pk hace get de todo, si devuelve el get donde coincida la id con la pk
