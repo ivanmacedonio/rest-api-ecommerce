@@ -1131,7 +1131,202 @@ en product serializer indicamos que la instancia no es un object sino una url ,
 los parsers vienen viene incluido en los viewset y se encargan de interactuar 
 cuando trabajamos con files. las iamgenes son files! 
 
-------------MINUTO 8 
+form parser recibe datos en forma de x-www-form-urlencode y el multipart parser 
+es cuando recibe la data mediante un formulario 
+
+estos parsers se definen en la clase de herencia apiview
+
+--sigue en product views con el uso de parsers 
+
+el parser se elige dependiendo de como llega la informacion. desde el test de django 
+la informacion se envia por form, asique a parser class debemos indicarle 
+multi part parser 
+
+
+con parser_classes = (JSONParser,MultiPartParser) permite que podamos enviar imagenes 
+en el campo correspondiente, mediante un formulario Json 
+
+            --CAP 45 VALIDACIONES EN PRODUCT SERIALIZER Y APP 
+                CONTROL DE GASTOS -- 
+
+--validaciones en product serializer 
+
+nosotros en el modelo de product indicamos que la unidad de medida y la categoria 
+pueden ser opcionales, ahora vamos a cambiarlo, forzando  la entrada de ese campo  desde 
+el serializador 
+
+agregamos la funcion validate 
+
+--sigue en product serializer 
+
+sirve para cuando envian los campos vacios o alguno de los dos vacio
+
+def validate_measure_unit(self,value):
+        if value == '' or value == None:
+            raise serializers.ValidationError('Debes ingresar la MU')
+        return value
+    
+    def validate_category_product(self,value):
+        if value == '' or value == None:
+            raise serializers.ValidationError('Debe ingresar una categoria')
+        return value
+
+se encargan de validar, pero si el campo tiene el nulo permitido en el serializer 
+no van a hacer efecto, para que sean obligatorios, creamos un validate 
+
+--sigue en product serializers 
+
+esto crea la validacion definitiva 
+
+sirve para cuando no se envia, debe ir acompañado de la otra validacion 
+
+def validate(self,data):
+        if 'measure_unit' not in data.keys():
+            raise serializers.ValidationError("Debe ingresar una unidad de medida")
+        
+        if 'category_product' not in data.keys():
+            raise serializers.ValidationError("Debe ingresar una categoria")
+        
+        return data
+
+
+--APP CONTROL DE GASTOS 
+
+una vez creado expense_manager, importamos lo necesario 
+
+from simple_history.models import HistoricalRecords
+from apps.base.models import BaseModel
+
+
+--sigue en expense_manager/models.py 
+
+el modelo de expense manager fue extraido del git del curso 
+
+        --CAP 46 INTERFAZ PARA ECOMMERCE --
+
+vamos a integrar un html (plantilla) dentro de una viewset, en este caso 
+la view es para el listado y crud 
+
+esto NO es posible, la forma mas dinamica de poder mostrar esto es 
+consumiendo la api desde un proyecto aparte, el link del curso esta 
+anexado a mi google navbar. primero creamos el proyecto, consumimos la api, 
+y creamos las vistas llamando a la data proveniente de dicha api 
+
+        --CAP 47 MUTABILIDAD EN REQUEST -- (solventar error 500 en front) 
+
+si enviamos la imagen vacia por postman, al estar permitido que este en blanco el campo, 
+compila sin problemas. El problema aparece en la interfaz, pues ahi si tira error 
+el error indica que la informacion enviada en el campo no era un archivo, es decir, esta esperando un 
+archivo. Este problema es que en la interfaz hay que programar al igual que en la api, que cuando no se envia 
+un archivo deje una cadena vacia. 
+
+La solucion en este caso va a ser desde el BACKEND, donde entra en juego la MUTABILIDAD
+
+--sigue en product viewset 
+
+el error se genera en el is valid 
+
+se agrego lo siguiente 
+
+data = request.data
+        data['image'] = None if type(data['image']) == str else data ['image']
+
+es una especie de validacion  antes de ser registrada 
+
+
+el error que nos saldria ahora en el front es que querydict no se puede modificar
+querydict es el tipo de dato de request data, en este caso indica que no podemos 
+cambiar ninguno de los valores que llegan x request data
+
+para activar la modificacion de request.data agregamos lo siguiente 
+
+request.data._mutable = True, luego de realizar el cambio que queriamos lo ponemos 
+en false 
+
+hay varias formas de solucionar esto, esta es una de tantas, en el proximo capitulo 
+voy a indagar mas 
+
+para poder usar esta funcion en cualquier lado, le damos generalizacion
+
+creamos el archivo utils.py en base 
+
+antes estaba esto 
+
+request.data._mutable = True
+        data = request.data #almacena todo la informacion que llego por post
+        data['image'] = None if type(data['image']) == str else data ['image']
+     #el atributo imagen es none si el tipo de dato que le llego es un string. 
+     #si el tipo de dato no es un string por descarte es un file, entonces almacena la data
+        request.data._mutable = False 
+
+ahora llamamos a la funcion que toma el campo de la data que le llega y a ese campo le aplica 
+el mutable true, eso nos ahorra todo el codigo que pegue arriba 
+
+
+--Ahora activar mutabilidad en edicion o retrieve 
+
+realizamos cambios en utils 
+
+suponiendo que ya tenemos una imagen, hacemos un update de todo menos de la imagen. 
+al no cargar una nueva imagen (xq el campo no es obligatorio) xq no queremos actualizarla se va a enviar cadena vacia
+y eso crea problemas. la solucion seria la siguiente 
+
+--toda la explicacion en base/utils 
+
+
+
+                    --CAP 49 REGISTRAR FACTURA -- 
+
+vamos a expense_manager/models 
+
+analizamos la funcion expense (gastos)
+
+expense es el modelo que hace referencia a la factura o boleta que recibimos 
+cuando compramos stock, con todos los campos de informacion 
+
+la interfaz deberia ser un form con un input para cada tipo de dato 
+
+--comenzamos a trabajar con la app de expense_manager
+
+creamos una carpeta api dentro de expense, dentro de api creamos la folder 
+views y serializers, todo lo que maneja una api 
+
+creamos la viewsets de la factura, sigue en expends_viewsets.py 
+
+creamos el serializador de la view de la factura 
+
+le creamos el router y lo enlazamos al archivo de rutas general 
+
+
+dentro del viewset vamos a hacer una funcion que busque al proveedor 
+
+creamos general serializers para variables como el proveedor 
+
+el backend se termina, y esta listo para que el que consuma la api tenga 
+acceso a todos los proveedores que nosotros agreguemos 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        
+
+
 
 
 
