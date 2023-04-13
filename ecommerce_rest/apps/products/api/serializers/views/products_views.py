@@ -3,11 +3,17 @@ from rest_framework import viewsets
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from rest_framework import status
+from rest_framework.parsers import JSONParser, MultiPartParser
+from django.shortcuts import render
+from apps.base.utils import validate_files
 
 
 class ProductViewSet(viewsets.ModelViewSet):
 
     serializer_class = ProductSerializer
+    
+    parser_classes = (JSONParser,MultiPartParser)
+
     
 
     def get_queryset(self, pk=None):
@@ -33,8 +39,8 @@ class ProductViewSet(viewsets.ModelViewSet):
         return Response({'error': 'No existe un producto'},status = status.HTTP_400_BAD_REQUEST)
 
     def create (self,request): 
-
-        serializer = self.serializer_class(data=request.data)
+        data = validate_files(request.data, 'image')
+        serializer = self.serializer_class(data=data)
         if serializer.is_valid():
             serializer.save()
             return Response({'message': 'Producto creado correctamente!'}, status= status.HTTP_201_CREATED)
@@ -42,7 +48,8 @@ class ProductViewSet(viewsets.ModelViewSet):
 
     def update(self,request,pk=None):
         if self.get_queryset(pk):
-            product_serializer = self.serializer_class(self.get_queryset(pk), data= request.data)
+            data = validate_files(request.data, 'image', True) #llama a la funcion almacenada en utils
+            product_serializer = self.serializer_class(self.get_queryset(pk), data=data)
             if product_serializer.is_valid():
                 product_serializer.save()
                 return Response(product_serializer.data, status= status.HTTP_200_OK)

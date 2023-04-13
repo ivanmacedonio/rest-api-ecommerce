@@ -9,7 +9,7 @@ from apps.users.api.serializers import CustomUserSerializer
 from rest_framework.generics import GenericAPIView
 from apps.users.models import User
 from rest_framework_simplejwt.tokens import RefreshToken
-
+from django.shortcuts import render
 from rest_framework_simplejwt.views import TokenObtainPairView
 
 
@@ -17,6 +17,7 @@ class Login(TokenObtainPairView): #clase para login que hereda esa clase de la l
 
     serializer_class = CustomTokenObtainPairSerializer #serializador del logueo definido en users.api.serializers 
 
+    
     def post(self,request,*args,**kwargs): #como funciona la informacion que llega por post, es decir, los datos del usuario
         username = request.data.get('username','') #en username se guarda la informacion que cae por request
         password = request.data.get('password','')#lo mismo que en username

@@ -46,8 +46,10 @@ INSTALLED_APPS = [
     'apps.users',
     'apps.products',
     'apps.base',
+    'apps.expense_manager',
     'drf_yasg',
     'rest_framework.authtoken',
+    
     
    
 ]
