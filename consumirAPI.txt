@@ -1,0 +1,11 @@
+los buttons pueden asignarse a funciones, donde estas se ejecutan cuando presionamos el input 
+
+DUDAS : 
+
+como consumir una API 
+
+como consumir una API desde DJANGO 
+
+como enlistar datos de una API en un html / se debe crear una lista que autoagrega li por cada dato que ingresa=?
+
+como agregar plantillas al proyecto consumidor de API

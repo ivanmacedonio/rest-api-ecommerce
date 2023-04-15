@@ -1,3 +1,7 @@
+      
+      
+      CURSO DJANGO REST_FRAMEWORK DEVELOPER.PE 
+      
       --------------   CAP 2 - MODELO DE USER  ------------
 
 pip install djangrestframework para instalarlo 
@@ -1306,7 +1310,35 @@ el backend se termina, y esta listo para que el que consuma la api tenga
 acceso a todos los proveedores que nosotros agreguemos 
 
 
+        --CAP 50 REGISTRAR FACTURA 2 -- 
 
+
+ya tenemos la parte de traer la informacion de un proveedor existente, 
+pero si ingresamos un proveedor que no existe, que pasa? 
+
+lo que vamos a hacer es crear un formulario que se despliegue a partir de un 
+boton de registrar 
+
+primero programamos una informacion capaz de tomar la  info que llega por formulario 
+y guardarla en la bbdd como un nuevo proveedor 
+
+--sigue en expends_viewsets donde creamos una nueva funcion capaz de registar al proveedor 
+
+tambien le creamos un serializador en expense_serializer
+
+la funcion registrar proveedor debe ser consumida por una funcion en un proyecto 
+ajeno que al mismo tiempo le de una vista .
+
+        --CAP FINAL REGISTRAR FACTURA 3 .. 
+
+--listado de combos 
+
+cuando estamos en el formulario a rellenar, y desplegamos para seleccionar el tipo 
+de producto de la factura, la lista esta vacia, es decir debemos crear una relacion entre los productos 
+y dicho formulario para que aparezcan los productos 
+
+tenemos que crear un action de get dentro del viewset de expends 
+que traiga los productos, tipo de pago y el voucher 
 
 
 

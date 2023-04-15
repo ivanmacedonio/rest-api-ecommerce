@@ -1,4 +1,6 @@
+from datetime import datetime 
 def validate_files(request, field, update = False ): #le enviamos el request y el campo que va a modificar
+
   #request almacena el request.data 
   
     request._mutable = True
@@ -19,3 +21,10 @@ def validate_files(request, field, update = False ): #le enviamos el request y e
 
     return request
 
+#le da formato legible a la fecha 
+
+def format_date(date):
+
+    date= datetime.strptime(date, '%d/%m/%Y')
+    date = f'{date.year} - {date.month} - {date.day}'
+    return date
